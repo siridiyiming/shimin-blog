@@ -1,0 +1,28 @@
+{
+  "name": "shimin-blog",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "check": "npm run build"
+  },
+  "dependencies": {
+    "@lucide/vue": "^1.52.0",
+    "@tiptap/extension-image": "^3.0.0",
+    "@tiptap/pm": "^3.0.0",
+    "@tiptap/starter-kit": "^3.0.0",
+    "@tiptap/vue-3": "^3.0.0",
+    "vue": "^3.5.0",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@vitejs/plugin-vue": "^5.2.0",
+    "vite": "^6.4.0"
+  },
+  "description": "一码当先小柿民博客：Vue 3 + Flask + MySQL 的手机优先个人博客",
+  "license": "MIT",
+  "author": "一码当先小柿民"
+}

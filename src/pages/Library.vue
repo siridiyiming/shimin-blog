@@ -1,0 +1,22 @@
+<script setup>
+import { computed, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { Search, ArrowRight, SlidersHorizontal } from '@lucide/vue';
+import { api, site, listCache } from '../api';
+import ContentCard from '../components/ContentCard.vue';
+const route = useRoute(), router = useRouter();
+const items = ref([]), loading = ref(false), more = ref(false), error = ref(''), page = ref(1), search = ref('');
+const meta = computed(() => ({ '/games': { type: 'game', title: '玩点有趣的', kicker: 'PLAY & EXPLORE', description: '每一个小作品，都是一次新探索。找到你喜欢的游戏，轻松玩一会儿。' }, '/knowledge': { type: 'knowledge', title: '知识，慢慢积累', kicker: 'LEARN & GROW', description: '长一点的思考，短一点的发现。把一路学到的知识和灵感留在这里。' }, '/tools': { type: 'tool', title: '好工具，值得分享', kicker: 'TOOLS & RESOURCES', description: '收藏实用的工具与网站，让创作更顺手，也让日常更轻松。' }, '/search': { type: '', title: '发现点什么', kicker: 'SEARCH & DISCOVER', description: '从游戏、文章、知识卡片和工具中，找一找你感兴趣的内容。' } }[route.path]));
+let requestId = 0;
+async function load(append = false) { const ticket = ++requestId; loading.value = true; error.value = ''; const key = route.fullPath; try { const query = new URLSearchParams({ ...route.query, type: route.query.type || meta.value.type, page: page.value }); const data = await api('/contents?' + query); if (ticket !== requestId) return; items.value = append ? [...items.value, ...data.items] : data.items; more.value = data.hasMore; listCache.set(key, { items: items.value, page: page.value, more: more.value }); } catch(e) { if (ticket === requestId) error.value = e.message; } finally { if (ticket === requestId) loading.value = false; } }
+watch(() => route.fullPath, () => { if (!meta.value) return; search.value = route.query.q || ''; const cached = listCache.get(route.fullPath); if (cached) { items.value = cached.items; page.value = cached.page; more.value = cached.more; loading.value = false; error.value = ''; requestId++; } else { page.value = 1; items.value = []; load(); } }, { immediate: true });
+function filter(key, value) { const query = { ...route.query }; if (value) query[key] = value; else delete query[key]; router.push({ path: route.path, query }); }
+</script>
+<template>
+  <div :class="['library-page', 'section-'+meta.type]"><header class="page-heading"><div class="eyebrow">{{ meta.kicker }}</div><h1>{{ meta.title }}<span>✳</span></h1><p>{{ meta.description }}</p></header>
+    <form class="search-field" @submit.prevent="filter('q', search.trim())"><Search :size="20"/><input v-model="search" :placeholder="route.path==='/search' ? '搜索游戏、文章、卡片或工具…' : '搜索这个栏目…'" aria-label="搜索关键词" maxlength="100"/><button class="button" type="submit">搜索 <ArrowRight :size="16"/></button></form>
+    <div class="filter-bar"><SlidersHorizontal :size="17"/><label v-if="route.path==='/search' || route.path==='/knowledge'"><span class="sr-only">内容类型</span><select :value="route.query.type || ''" @change="filter('type',$event.target.value)"><option value="">全部类型</option><option v-if="route.path==='/search'" value="game">游戏</option><option value="article">长文章</option><option value="note">知识卡片</option><option v-if="route.path==='/search'" value="tool">工具</option></select></label><label><span class="sr-only">分类</span><select :value="route.query.category || ''" @change="filter('category',$event.target.value)"><option value="">全部分类</option><option v-for="t in site.taxonomies.filter(t=>t.kind==='category')" :key="t.id">{{ t.name }}</option></select></label><label><span class="sr-only">标签</span><select :value="route.query.tag || ''" @change="filter('tag',$event.target.value)"><option value="">全部标签</option><option v-for="t in site.taxonomies.filter(t=>t.kind==='tag')" :key="t.id">{{ t.name }}</option></select></label><span class="filter-note">最近发布</span></div>
+    <p v-if="error" class="error" role="alert">{{ error }} <button @click="load()">重试</button></p><div v-if="loading && !items.length" class="state-panel">正在寻找值得分享的内容…</div><div v-else-if="!items.length && !error" class="state-panel"><Search :size="32"/><h2>{{ Object.keys(route.query).length ? '暂时没有找到相关内容' : '内容正在准备中' }}</h2><p>试着换个关键词或筛选条件，也欢迎稍后回来看看。</p><button class="button secondary" @click="router.push(route.path)">清除筛选</button></div>
+    <div class="library-grid"><ContentCard v-for="item in items" :key="item.id" :item="item"/></div><button v-if="more" class="button secondary load-more" :disabled="loading" @click="page++; load(true)">{{ loading ? '加载中…' : '加载更多' }}</button><p v-else-if="items.length" class="end-note">暂时就这些，新的发现还会继续。</p>
+  </div>
+</template>
